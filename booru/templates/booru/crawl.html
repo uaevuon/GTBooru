@@ -1,0 +1,10 @@
+
+
+{% block content %}
+<h1>Image Crawler</h1>
+<form method="post">
+    {% csrf_token %}
+    <input type="url" name="url" placeholder="Enter URL to crawl" required>
+    <button type="submit">Crawl Images</button>
+</form>
+{% endblock %}

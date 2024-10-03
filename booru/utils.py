@@ -1,3 +1,4 @@
+import subprocess
 import base64
 import copy
 import hashlib
@@ -23,6 +24,16 @@ from rolepermissions.roles import RolesManager
 
 sample_max_resolution = (850, None)
 preview_max_resolution = (150, 150)
+
+def run_gallery_dl(url):
+    try:
+        result = subprocess.run(['gallery-dl', url], 
+                                capture_output=True, text=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return f"Error: {e.stderr}"
+    except FileNotFoundError:
+        return "Error: gallery-dl is not installed or not in the system PATH."
 
 def space_splitter(tag_string):
     return [t.strip().lower() for t in tag_string.split(' ') if t.strip()]

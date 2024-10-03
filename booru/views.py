@@ -119,6 +119,16 @@ def upload(request): # post_create
 
     return render(request, 'booru/upload.html', {"form": form})
 
+@login_required
+@user_is_not_blocked
+def crawl(request):
+    result = None
+    if request.method == 'POST':
+        url = request.POST.get('url')
+        if url:
+            result = utils.run_gallery_dl(url)
+    return render(request, 'booru/crawl.html', {'result': result})
+
 @user_is_not_blocked
 def post_list_detail(request, page_number = 1):
     tags = request.GET.get("tags", "")
