@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import os, io
 from setuptools import find_packages, setup
 
 BASE_DIR = os.path.join(os.path.dirname(__file__))
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding="utf-8") as readme:
     README = readme.read()
 
 with io.open(os.path.join(BASE_DIR, 'requirements.txt'), encoding='utf-8') as fh:
