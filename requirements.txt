@@ -15,3 +15,4 @@ six==1.16.0
 django-ninja-jwt==5.2.6
 orjson==3.9.9
 django-cors-headers==4.3.0
+setuptools
