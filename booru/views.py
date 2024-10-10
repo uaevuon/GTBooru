@@ -1,4 +1,8 @@
 import json
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
 import diff_match_patch as dmp_module
 from django.apps import apps
@@ -9,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, Paginator
 from django.db.models import Count, Q
 from django.forms.models import model_to_dict
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -30,6 +34,8 @@ from .forms import (BanUserForm, CreatePostForm, EditPostForm,
                     TagListSearchForm)
 from .models import (Comment, Configuration, Favorite, Gallery, Implication,
                      Post, PostTag, ScoreVote, TaggedPost)
+
+from guardian_tales_predictor import predict_image
 
 
 @user_is_not_blocked
@@ -105,17 +111,37 @@ def post_history(request, post_id, page_number = 1):
 
 @login_required
 @user_is_not_blocked
-def upload(request): # post_create
-    form = CreatePostForm(request.POST or None, request.FILES or None)
-    
+def upload(request):
+    action = request.POST.get('action', 'post')  # Get 'post' or 'predict' action
+
+    # Pass the action to the form to conditionally validate tags
+    form = CreatePostForm(request.POST or None, request.FILES or None, action=action)
+
     if form.is_valid():
-        post = form.save(commit=False)
-        post.uploader = request.user
-        post.save_without_historical_record()
-        form.save_m2m()
-        post.check_and_update_implications()
-        post.save()
-        return redirect('booru:post_detail', post_id=post.id)
+        if action == 'post':  # Handle the Post button
+            post = form.save(commit=False)
+            post.uploader = request.user
+            post.save_without_historical_record()
+            form.save_m2m()
+            post.check_and_update_implications()
+            post.save()
+            return redirect('booru:post_detail', post_id=post.id)
+
+        elif action == 'predict' and 'media' in request.FILES:  # Handle the Predict button (AJAX)
+            print('predict debug')
+            image = request.FILES['media']
+            temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', image.name)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+
+            with open(temp_path, 'wb+') as destination:
+                for chunk in image.chunks():
+                    destination.write(chunk)
+
+            predicted_label, confidence = predict_image(temp_path)
+            os.remove(temp_path)
+
+            # Return JSON with predicted label for AJAX
+            return JsonResponse({'predicted_label': predicted_label})
 
     return render(request, 'booru/upload.html', {"form": form})
 

@@ -29,13 +29,13 @@ def validate_sources(source):
     return sources
 
 class CreatePostForm(forms.ModelForm):
-    '''Form for creating an post.'''
+    '''Form for creating a post.'''
 
     media = forms.FileField(required=False)
     media_url = forms.URLField(required=False)
     sample = forms.ImageField(required=False)
     preview = forms.ImageField(required=False)
-    tags = TagField(required=True, help_text="Required: Choose one or more tags.")
+    tags = TagField(required=False, help_text="Required: Choose one or more tags.")  # Change to required=False
     source = forms.CharField(required=False)
     rating = forms.IntegerField()
 
@@ -44,7 +44,9 @@ class CreatePostForm(forms.ModelForm):
         fields = ["media", "media_url", "sample", "preview", "tags", "rating", "source", "description"]
 
     def __init__(self, *args, **kwargs):
+        self.action = kwargs.pop('action', 'post')  # Add 'action' as a parameter to track 'post' or 'predict'
         super(CreatePostForm, self).__init__(*args, **kwargs)
+
         self.fields['media'].widget = forms.FileInput(attrs={'class': 'custom-file-input'})
         self.fields['media_url'].widget = forms.URLInput(attrs={'class': 'form-control'})
         self.fields['media_url'].required = False
@@ -54,8 +56,10 @@ class CreatePostForm(forms.ModelForm):
         self.fields['description'].widget = forms.Textarea(attrs={'class': 'form-control'})
         self.fields['tags'].widget = forms.TextInput(attrs={'class': 'form-control'})
 
-    def clean( self ):
-        cleaned_data = self.cleaned_data
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Media validation (unchanged)
         media_file = cleaned_data.get('media')
         media_url = cleaned_data.get('media_url')
         detected_media = None
@@ -68,6 +72,7 @@ class CreatePostForm(forms.ModelForm):
             detected_media = media_file
         elif media_url:
             detected_media = utils.get_remote_image_as_InMemoryUploadedFile(media_url)
+        
         if not utils.get_pil_image_if_valid(detected_media):
             if not utils.check_video_is_valid(detected_media):
                 raise forms.ValidationError("Please upload a valid image or video.")
@@ -82,6 +87,11 @@ class CreatePostForm(forms.ModelForm):
             raise forms.ValidationError("This file is not allowed to be uploaded. Contact the staff.")
         
         self.cleaned_data['media'] = detected_media
+
+        # Only enforce tags requirement when 'action' is 'post'
+        if self.action == 'post' and not cleaned_data.get('tags'):
+            raise forms.ValidationError("Please provide at least one tag.")
+
         return cleaned_data
 
     def clean_source(self):
@@ -91,6 +101,7 @@ class CreatePostForm(forms.ModelForm):
             if not source:
                 raise forms.ValidationError("Please use valid URLs.")
         return source
+
 
 class EditPostForm(forms.ModelForm):
     '''Form for editing an post.'''

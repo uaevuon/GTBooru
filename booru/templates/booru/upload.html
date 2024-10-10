@@ -6,7 +6,59 @@
 
 {% block scripts %}
 <script>
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Check if this cookie string begins with the name we want
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     $(function () {
+        const csrftoken = getCookie('csrftoken');  // Get CSRF token
+
+        // Handle the Predict button with AJAX
+        $('#predict-button').click(function(e) {
+            e.preventDefault();  // Prevent the form from submitting normally
+
+            var formData = new FormData($('form')[0]);
+            formData.append('action', 'predict');  // Append 'predict' action to form data
+
+            $.ajax({
+                url: "",  // Keep the same URL as the current view
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                'X-CSRFToken': csrftoken  // Add CSRF token to the request headers
+                },
+                success: function(response) {
+                    // Update the tags field with the predicted label
+                    var predictedTag = response.predicted_label;
+                    var tagsField = $('#id_tags');  // Assuming the tags field has id='id_tags'
+                    
+                    if (tagsField.val()) {
+                        tagsField.val(tagsField.val() + ', ' + predictedTag);
+                    } else {
+                        tagsField.val(predictedTag);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log(error);
+                }
+            });
+        });
+
         $("#id_media_url").blur(function() {
             var image_url = $("#id_media_url").val();
             if (checkURL(image_url)) {
@@ -143,7 +195,8 @@
                 {% endif %}
                 {% endif %}
                 {% endfor %}
-                <button type="submit" class="btn btn-primary btn-lg float-right">Post</button>
+		        <button type="submit" name="action" value="upload" class="btn btn-primary btn-lg float-right">Post</button>
+                <button type="button" id="predict-button" class="btn btn-secondary btn-lg float-right mr-2">Predict</button>
             </form>
         </div>
     </div>
