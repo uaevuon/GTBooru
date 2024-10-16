@@ -28,25 +28,41 @@
 
         // Handle the Predict button with AJAX
         $('#predict-button').click(function(e) {
-            e.preventDefault();  // Prevent the form from submitting normally
+            e.preventDefault();  // 기본 폼 제출을 막음
 
-            var formData = new FormData($('form')[0]);
-            formData.append('action', 'predict');  // Append 'predict' action to form data
+            var formData = new FormData($('form')[0]);  // FormData 객체에 폼 데이터를 수집
+
+            // 선택된 파일을 확인하고 FormData에 추가
+            var fileInput = $('input[type="file"]')[0];  // 파일 입력 요소를 가져옴
+            var file = fileInput.files[0];  // 첫 번째 파일을 가져옴
+
+            if (file) {
+                formData.append('media', file);  // FormData에 파일을 추가
+            } else {
+                console.log('No file selected');
+            }
+
+            formData.append('action', 'predict');  // 'predict' 액션 추가
+
+            // FormData 확인 로그
+            for (var pair of formData.entries()) {
+                console.log(pair[0]+ ': ' + pair[1]);  // FormData의 key와 value를 로그로 출력
+            }
 
             $.ajax({
-                url: "",  // Keep the same URL as the current view
+                url: window.location.href,  // 현재 페이지 URL로 POST 요청
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 headers: {
-                'X-CSRFToken': csrftoken  // Add CSRF token to the request headers
+                    'X-CSRFToken': csrftoken  // CSRF 토큰 추가
                 },
                 success: function(response) {
-                    // Update the tags field with the predicted label
+                    // 성공적으로 응답을 받았을 때 태그 필드 업데이트
                     var predictedTag = response.predicted_label;
                     var tagsField = $('#id_tags');  // Assuming the tags field has id='id_tags'
-                    
+
                     if (tagsField.val()) {
                         tagsField.val(tagsField.val() + ', ' + predictedTag);
                     } else {
@@ -54,10 +70,11 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.log(error);
+                    console.log(error);  // 오류 로그 출력
                 }
             });
         });
+
 
         $("#id_media_url").blur(function() {
             var image_url = $("#id_media_url").val();

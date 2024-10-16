@@ -113,37 +113,43 @@ def post_history(request, post_id, page_number = 1):
 @user_is_not_blocked
 def upload(request):
     action = request.POST.get('action', 'post')  # Get 'post' or 'predict' action
+    print(f"Action received: {action}")  # action 값을 출력하여 디버깅
 
     # Pass the action to the form to conditionally validate tags
     form = CreatePostForm(request.POST or None, request.FILES or None, action=action)
 
-    if form.is_valid():
-        if action == 'post':  # Handle the Post button
-            post = form.save(commit=False)
-            post.uploader = request.user
-            post.save_without_historical_record()
-            form.save_m2m()
-            post.check_and_update_implications()
-            post.save()
-            return redirect('booru:post_detail', post_id=post.id)
+    # Post 버튼인 경우에만 form validation 실행
+    if action == 'post' and form.is_valid():
+        post = form.save(commit=False)
+        post.uploader = request.user
+        post.save_without_historical_record()
+        form.save_m2m()
+        post.check_and_update_implications()
+        post.save()
+        return redirect('booru:post_detail', post_id=post.id)
 
-        elif action == 'predict' and 'media' in request.FILES:  # Handle the Predict button (AJAX)
-            print('predict debug')
-            image = request.FILES['media']
-            temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', image.name)
-            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+    elif action == 'predict':
+        try:
+            image = request.FILES['media']  # Ajax 요청에서 전송된 파일을 처리
+        except KeyError:
+            return JsonResponse({'error': 'No media file provided'}, status=400)
 
-            with open(temp_path, 'wb+') as destination:
-                for chunk in image.chunks():
-                    destination.write(chunk)
+        temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', image.name)
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 
-            predicted_label, confidence = predict_image(temp_path)
-            os.remove(temp_path)
+        with open(temp_path, 'wb+') as destination:
+            for chunk in image.chunks():
+                destination.write(chunk)
 
-            # Return JSON with predicted label for AJAX
-            return JsonResponse({'predicted_label': predicted_label})
+        predicted_label, confidence = predict_image(temp_path)
+        os.remove(temp_path)
 
+        return JsonResponse({'predicted_label': predicted_label})
+
+
+    # 폼이 유효하지 않거나 요청이 정상적이지 않은 경우 HTML 렌더링
     return render(request, 'booru/upload.html', {"form": form})
+
 
 @login_required
 @user_is_not_blocked
