@@ -59,15 +59,23 @@
                     'X-CSRFToken': csrftoken  // CSRF 토큰 추가
                 },
                 success: function(response) {
-                    // 성공적으로 응답을 받았을 때 태그 필드 업데이트
+                    // 예측된 태그를 받아옴
                     var predictedTag = response.predicted_label;
-                    var tagsField = $('#id_tags');  // Assuming the tags field has id='id_tags'
+                    
+                    // 기존의 tagsinput 요소를 선택
+                    var tagsInput = $('#id_tags_tagsinput');
 
-                    if (tagsField.val()) {
-                        tagsField.val(tagsField.val() + ', ' + predictedTag);
-                    } else {
-                        tagsField.val(predictedTag);
-                    }
+                    // 새로운 태그를 동적으로 생성
+                    var newTag = `<span class="tag"><span>${predictedTag}&nbsp;&nbsp;</span><a href="#" title="Removing tag">x</a></span>`;
+                    
+                    // 태그를 tagsinput에 추가
+                    tagsInput.find('#id_tags_addTag').before(newTag);
+
+                    // 추가된 태그를 제거하는 기능도 추가 (x 클릭 시 태그 제거)
+                    tagsInput.find('.tag a').click(function(e) {
+                        e.preventDefault();
+                        $(this).parent().remove();  // 클릭된 태그(span) 제거
+                    });
                 },
                 error: function(xhr, status, error) {
                     console.log(error);  // 오류 로그 출력
