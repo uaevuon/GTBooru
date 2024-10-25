@@ -112,21 +112,31 @@ def post_history(request, post_id, page_number = 1):
 @login_required
 @user_is_not_blocked
 def upload(request):
-    action = request.POST.get('action', 'post')  # Get 'post' or 'predict' action
-    print(f"Action received: {action}")  # action 값을 출력하여 디버깅
-
-    # Pass the action to the form to conditionally validate tags
-    form = CreatePostForm(request.POST or None, request.FILES or None, action=action)
-
-    # Post 버튼인 경우에만 form validation 실행
-    if action == 'post' and form.is_valid():
-        post = form.save(commit=False)
-        post.uploader = request.user
-        post.save_without_historical_record()
-        form.save_m2m()
-        post.check_and_update_implications()
-        post.save()
-        return redirect('booru:post_detail', post_id=post.id)
+    action = request.POST.get('action', 'post')
+    print(f"Action received: {action}")
+    
+    # Debug request data
+    print("POST data:", request.POST)
+    print("FILES data:", request.FILES)
+    
+    form = CreatePostForm(request.POST or None, request.FILES or None)
+    
+    if action == 'post':
+        print("Validating form...")
+        is_valid = form.is_valid()
+        print("Form is valid:", is_valid)
+        
+        if not is_valid:
+            print("Form errors:", form.errors)  # Print all form validation errors
+            
+        if is_valid:
+            post = form.save(commit=False)
+            post.uploader = request.user
+            post.save_without_historical_record()
+            form.save_m2m()
+            post.check_and_update_implications()
+            post.save()
+            return redirect('booru:post_detail', post_id=post.id)
 
     elif action == 'predict':
         try:
