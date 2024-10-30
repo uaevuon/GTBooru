@@ -1,4 +1,7 @@
+import os, subprocess
+
 from django import forms
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.conf import settings
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django.core.exceptions import ValidationError
@@ -68,8 +71,37 @@ class CreatePostForm(forms.ModelForm):
         elif media_file is not None:
             detected_media = media_file
         elif media_url:
-            detected_media = utils.get_remote_image_as_InMemoryUploadedFile(media_url)
-        
+            # Output directory set to the temp folder under MEDIA_ROOT
+            output_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+            os.makedirs(output_dir, exist_ok=True)  # Ensure the directory exists
+
+            # Extract the image ID from the URL
+            image_id = media_url.split('/')[-1]  # Get the last part of the URL
+            expected_filename = f"{image_id}_p0.png"  # Set expected filename format
+
+            # Run gallery-dl to download the image
+            command = ["gallery-dl", "-D", output_dir, media_url]
+            try:
+                subprocess.run(command, check=True)  # Run the command to download the image
+
+                # Open the downloaded image as a Django file object
+                image_path = os.path.join(output_dir, expected_filename)
+                if os.path.exists(image_path):
+                    detected_media = InMemoryUploadedFile(
+                        open(image_path, 'rb'),
+                        None,
+                        expected_filename,
+                        'image/png',  # Adjust this based on the actual content type
+                        os.path.getsize(image_path),
+                        None
+                    )
+                else:
+                    raise forms.ValidationError("Downloaded image not found.")
+            except subprocess.CalledProcessError:
+                raise forms.ValidationError("Error downloading image. Please check the URL.")
+            except FileNotFoundError:
+                raise forms.ValidationError(f"Downloaded image not found: {image_path}")
+
         if not utils.get_pil_image_if_valid(detected_media):
             if not utils.check_video_is_valid(detected_media):
                 raise forms.ValidationError("Please upload a valid image or video.")
