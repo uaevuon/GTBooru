@@ -10,7 +10,6 @@ app_name = "booru"
 urlpatterns = [
     re_path(r'^$', views.index, name='index'),
     re_path(r'^upload/$', views.upload, name='upload'),
-    re_path(r'^crawl/$', views.crawl, name='crawl'),
 
     re_path(r'^post/view/(?P<post_id>[0-9]+)/$', views.post_detail, name='post_detail'),
     re_path(r'^post/view/(?P<post_id>[0-9]+)/history$', views.post_history, name='post_history'),
