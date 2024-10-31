@@ -1,6 +1,6 @@
 # GTbooru
 
-GTbooru is a fork of the Boorunaut project. Please refer to the parent Git repository for more information.
+GTbooru is a fork of the Boorunaut project. Please refer to the parent Git repository [GT](https://github.com/uaevuon/GT) for more information.
 
 ## Installation
 
